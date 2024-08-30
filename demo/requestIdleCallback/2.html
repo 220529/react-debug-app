@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    #box {
+      width: 100px;
+      height: 100px;
+      background-color: blue;
+      position: absolute;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="box"></div>
+
+  <script>
+    const box = document.getElementById('box');
+    let position = 0;
+
+    function animate() {
+      position += 1;
+      box.style.left = position + 'px';
+
+      if (position < window.innerWidth - 100) {
+        setTimeout(animate, 16); // Run approximately every 16ms for 60 FPS
+      }
+    }
+
+    animate();
+  </script>
+</body>
+
+</html>

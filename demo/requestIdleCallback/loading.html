@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    .loading {
+      width: 150px;
+      height: 4px;
+      border-radius: 2px;
+      margin: 0 auto;
+      margin-top: 100px;
+      position: relative;
+      background: lightgreen;
+      -webkit-animation: changeBgColor 1.04s ease-in infinite alternate;
+    }
+
+    .loading span {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: lightgreen;
+      position: absolute;
+      margin-top: -7px;
+      margin-left: -8px;
+      -webkit-animation: changePosition 1.04s ease-in infinite alternate;
+    }
+
+    @-webkit-keyframes changeBgColor {
+      0% {
+        background: lightgreen;
+      }
+
+      100% {
+        background: lightblue;
+      }
+    }
+
+    @-webkit-keyframes changePosition {
+      0% {
+        background: lightgreen;
+      }
+
+      100% {
+        margin-left: 142px;
+        background: lightblue;
+      }
+    }
+  </style>
+
+
+</head>
+
+<body>
+  <div class="loading">
+    <span></span>
+  </div>
+  <button id="startButtonSync">btn</button>
+  <script src="./raf.js"></script>
+  <script>
+    function addTaskSync() {
+      // 注意这里我们将任务量提升到了至少 50000 个
+      let n = getRandomIntInclusive(50000, 100000);
+      for (var i = 0; i < n; i++) {
+        console.log(`task num ${i + 1} of list ${n}`)
+      }
+      scheduleStatusRefresh();
+    }
+
+    document.getElementById("startButtonSync").addEventListener("click", addTaskSync, false);
+
+    window.requestIdleCallback = window.requestIdleCallback || function (handler) {
+      let startTime = Date.now();
+
+      return setTimeout(function () {
+        handler({
+          didTimeout: false,
+          timeRemaining: function () {
+            return Math.max(0, 50.0 - (Date.now() - startTime));
+          }
+        });
+      }, 1);
+    }
+
+
+  </script>
+</body>
+
+</html>
