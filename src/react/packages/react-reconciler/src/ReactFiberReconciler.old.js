@@ -319,58 +319,73 @@ export function createHydrationContainer(
 }
 
 export function updateContainer(
-  element: ReactNodeList,
-  container: OpaqueRoot,
-  parentComponent: ?React$Component<any, any>,
-  callback: ?Function,
+  element: ReactNodeList, // 要渲染的 React 元素（可以是单个元素或元素列表）
+  container: OpaqueRoot, // 表示 React 应用的根节点容器
+  parentComponent: ?React$Component<any, any>, // 父组件（可能为空）
+  callback: ?Function, // 在更新完成后调用的回调函数（可选）
 ): Lane {
+  // 开发环境下，用于调试的钩子函数
   if (__DEV__) {
     onScheduleRoot(container, element);
   }
+
+  // 获取当前的根 Fiber 节点
   const current = container.current;
+
+  // 请求当前事件的时间，用于调度优先级
   const eventTime = requestEventTime();
+
+  // 根据当前 Fiber 节点请求一个更新的 lane（优先级）
   const lane = requestUpdateLane(current);
 
+  // 如果启用了调度分析器，在此记录渲染的调度
   if (enableSchedulingProfiler) {
     markRenderScheduled(lane);
   }
 
+  // 获取子树的上下文，这对于服务端渲染或遗留上下文 API 是必要的
   const context = getContextForSubtree(parentComponent);
+
+  // 如果容器的上下文还没有初始化，则设置它
   if (container.context === null) {
     container.context = context;
   } else {
+    // 否则将上下文存储为待处理的上下文，这将在下一次渲染时使用
     container.pendingContext = context;
   }
 
+  // 在开发环境下，检查是否存在嵌套的更新，并给出警告
   if (__DEV__) {
     if (
-      ReactCurrentFiberIsRendering &&
-      ReactCurrentFiberCurrent !== null &&
-      !didWarnAboutNestedUpdates
+      ReactCurrentFiberIsRendering && // 检查当前是否处于渲染过程
+      ReactCurrentFiberCurrent !== null && // 检查当前渲染的 Fiber 是否存在
+      !didWarnAboutNestedUpdates // 确保警告只显示一次
     ) {
       didWarnAboutNestedUpdates = true;
       console.error(
         'Render methods should be a pure function of props and state; ' +
-          'triggering nested component updates from render is not allowed. ' +
-          'If necessary, trigger nested updates in componentDidUpdate.\n\n' +
-          'Check the render method of %s.',
+        'triggering nested component updates from render is not allowed. ' +
+        'If necessary, trigger nested updates in componentDidUpdate.\n\n' +
+        'Check the render method of %s.',
         getComponentNameFromFiber(ReactCurrentFiberCurrent) || 'Unknown',
       );
     }
   }
 
+  // 创建一个更新对象，包含事件时间和更新的 lane
   const update = createUpdate(eventTime, lane);
-  // Caution: React DevTools currently depends on this property
-  // being called "element".
-  update.payload = {element};
 
+  // React DevTools 依赖于这个属性的命名为 "element"
+  update.payload = { element };
+
+  // 检查回调函数是否存在，如果存在则将其添加到更新对象中
   callback = callback === undefined ? null : callback;
   if (callback !== null) {
     if (__DEV__) {
       if (typeof callback !== 'function') {
         console.error(
           'render(...): Expected the last optional `callback` argument to be a ' +
-            'function. Instead received: %s.',
+          'function. Instead received: %s.',
           callback,
         );
       }
@@ -378,12 +393,16 @@ export function updateContainer(
     update.callback = callback;
   }
 
+  // 将更新对象添加到当前 Fiber 节点的更新队列中
   const root = enqueueUpdate(current, update, lane);
+
+  // 如果更新队列非空，则调度更新
   if (root !== null) {
     scheduleUpdateOnFiber(root, current, lane, eventTime);
     entangleTransitions(root, current, lane);
   }
 
+  // 返回当前的 lane，用于调度控制
   return lane;
 }
 

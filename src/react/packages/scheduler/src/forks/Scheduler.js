@@ -146,42 +146,54 @@ function handleTimeout(currentTime) {
 }
 
 function flushWork(hasTimeRemaining, initialTime) {
+  // 如果启用了性能分析
   if (enableProfiling) {
+    // 记录调度器未被挂起的时间
     markSchedulerUnsuspended(initialTime);
   }
 
-  // We'll need a host callback the next time work is scheduled.
+  // 我们需要在下一次工作被调度时一个主机回调
   isHostCallbackScheduled = false;
   if (isHostTimeoutScheduled) {
-    // We scheduled a timeout but it's no longer needed. Cancel it.
+    // 如果之前调度了一个超时但现在不再需要，取消它
     isHostTimeoutScheduled = false;
     cancelHostTimeout();
   }
 
+  // 标记开始执行工作
   isPerformingWork = true;
+  // 保存当前的优先级级别
   const previousPriorityLevel = currentPriorityLevel;
+
   try {
     if (enableProfiling) {
       try {
+        // 执行工作循环
         return workLoop(hasTimeRemaining, initialTime);
       } catch (error) {
+        // 如果工作循环抛出错误
         if (currentTask !== null) {
           const currentTime = getCurrentTime();
+          // 记录任务出错的时间
           markTaskErrored(currentTask, currentTime);
-          currentTask.isQueued = false;
+          currentTask.isQueued = false; // 标记任务未排队
         }
+        // 重新抛出错误
         throw error;
       }
     } else {
-      // No catch in prod code path.
+      // 在生产环境中没有错误捕获
       return workLoop(hasTimeRemaining, initialTime);
     }
   } finally {
-    currentTask = null;
-    currentPriorityLevel = previousPriorityLevel;
-    isPerformingWork = false;
+    // 清理状态
+    currentTask = null; // 重置当前任务
+    currentPriorityLevel = previousPriorityLevel; // 恢复之前的优先级级别
+    isPerformingWork = false; // 标记工作执行完毕
+
     if (enableProfiling) {
       const currentTime = getCurrentTime();
+      // 记录调度器被挂起的时间
       markSchedulerSuspended(currentTime);
     }
   }
@@ -307,21 +319,27 @@ function unstable_wrapCallback(callback) {
 }
 
 function unstable_scheduleCallback(priorityLevel, callback, options) {
+  // 获取当前时间
   var currentTime = getCurrentTime();
 
   var startTime;
   if (typeof options === 'object' && options !== null) {
+    // 从 options 中提取延迟时间
     var delay = options.delay;
     if (typeof delay === 'number' && delay > 0) {
+      // 如果延迟时间是正数，则设置任务的开始时间为当前时间加上延迟时间
       startTime = currentTime + delay;
     } else {
+      // 否则，任务的开始时间为当前时间
       startTime = currentTime;
     }
   } else {
+    // 如果 options 不是对象或为 null，任务的开始时间为当前时间
     startTime = currentTime;
   }
 
   var timeout;
+  // 根据优先级选择任务超时时间
   switch (priorityLevel) {
     case ImmediatePriority:
       timeout = IMMEDIATE_PRIORITY_TIMEOUT;
@@ -341,50 +359,57 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
       break;
   }
 
+  // 计算任务的过期时间
   var expirationTime = startTime + timeout;
 
+  // 创建新的任务对象
   var newTask = {
-    id: taskIdCounter++,
-    callback,
-    priorityLevel,
-    startTime,
-    expirationTime,
-    sortIndex: -1,
+    id: taskIdCounter++, // 任务的唯一标识符
+    callback, // 任务执行的回调函数
+    priorityLevel, // 任务的优先级
+    startTime, // 任务的开始时间
+    expirationTime, // 任务的过期时间
+    sortIndex: -1, // 用于排序的索引
   };
+
   if (enableProfiling) {
-    newTask.isQueued = false;
+    newTask.isQueued = false; // 如果启用了性能分析器，将任务标记为未排队
   }
 
   if (startTime > currentTime) {
-    // This is a delayed task.
-    newTask.sortIndex = startTime;
-    push(timerQueue, newTask);
+    // 如果任务是延迟任务
+    newTask.sortIndex = startTime; // 设置排序索引为开始时间
+    push(timerQueue, newTask); // 将任务推入定时队列
+
     if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
-      // All tasks are delayed, and this is the task with the earliest delay.
+      // 如果任务队列为空，且这是定时队列中最早的任务
       if (isHostTimeoutScheduled) {
-        // Cancel an existing timeout.
+        // 如果已经安排了超时，取消现有的超时
         cancelHostTimeout();
       } else {
         isHostTimeoutScheduled = true;
       }
-      // Schedule a timeout.
+      // 安排超时
       requestHostTimeout(handleTimeout, startTime - currentTime);
     }
   } else {
-    newTask.sortIndex = expirationTime;
-    push(taskQueue, newTask);
+    // 如果任务不是延迟任务
+    newTask.sortIndex = expirationTime; // 设置排序索引为过期时间
+    push(taskQueue, newTask); // 将任务推入任务队列
+
     if (enableProfiling) {
-      markTaskStart(newTask, currentTime);
-      newTask.isQueued = true;
+      markTaskStart(newTask, currentTime); // 如果启用了性能分析器，标记任务开始时间
+      newTask.isQueued = true; // 标记任务为已排队
     }
-    // Schedule a host callback, if needed. If we're already performing work,
-    // wait until the next time we yield.
+
+    // 如果需要，安排主机回调
     if (!isHostCallbackScheduled && !isPerformingWork) {
       isHostCallbackScheduled = true;
       requestHostCallback(flushWork);
     }
   }
 
+  // 返回新创建的任务
   return newTask;
 }
 

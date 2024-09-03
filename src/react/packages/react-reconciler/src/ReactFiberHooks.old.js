@@ -1507,30 +1507,46 @@ function forceStoreRerender(fiber) {
 }
 
 function mountState<S>(
-  initialState: (() => S) | S,
-): [S, Dispatch<BasicStateAction<S>>] {
+  initialState: (() => S) | S, // `initialState` 可以是一个值或者是一个返回值的函数。
+): [S, Dispatch<BasicStateAction<S>>] { // 返回一个数组，包含当前的状态和一个用于更新状态的 `dispatch` 函数。
+
   const hook = mountWorkInProgressHook();
+  // 获取当前正在处理的 Hook。这是 React 内部的一部分，表示当前的 `useState` Hook 在工作链表中的位置。
+
   if (typeof initialState === 'function') {
-    // $FlowFixMe: Flow doesn't like mixed types
+    // 如果 `initialState` 是一个函数，那么调用它来获取初始状态的值。
+    // 这种情况是为懒初始化设计的，即传递一个函数而不是一个值，以避免在初次渲染时进行昂贵的计算。
     initialState = initialState();
   }
+
+  // 将 `initialState` 存储在 `hook.memoizedState` 和 `hook.baseState` 中。
+  // `memoizedState` 是当前的状态值，`baseState` 是基础状态，用于计算新的状态。
   hook.memoizedState = hook.baseState = initialState;
+
+  // 创建一个更新队列，这个队列存储了所有将要应用的状态更新。
   const queue: UpdateQueue<S, BasicStateAction<S>> = {
-    pending: null,
-    interleaved: null,
-    lanes: NoLanes,
-    dispatch: null,
-    lastRenderedReducer: basicStateReducer,
-    lastRenderedState: (initialState: any),
+    pending: null,  // `pending` 存储挂起的更新。初始化为 `null`，表示当前没有挂起的更新。
+    interleaved: null, // 用于存储跨组件的并发更新，初始化为 `null`。
+    lanes: NoLanes, // `lanes` 用于跟踪更新的优先级。
+    dispatch: null, // `dispatch` 是实际触发状态更新的函数，在稍后会初始化。
+    lastRenderedReducer: basicStateReducer, // 指向最后使用的状态更新函数，默认为 `basicStateReducer`。
+    lastRenderedState: (initialState: any), // 存储最后一次渲染时的状态，这里是初始状态。
   };
+
+  // 将创建的队列与当前 Hook 关联起来，以便在后续的状态更新中使用。
   hook.queue = queue;
+
+  // 定义 `dispatch` 函数，绑定到当前渲染的 Fiber 和更新队列上。
+  // `dispatchSetState` 是负责处理状态更新的函数，绑定之后的 `dispatch` 函数将在 `useState` 中返回。
   const dispatch: Dispatch<
     BasicStateAction<S>,
   > = (queue.dispatch = (dispatchSetState.bind(
     null,
-    currentlyRenderingFiber,
-    queue,
+    currentlyRenderingFiber, // 绑定当前正在渲染的 Fiber，这样在触发更新时，React 知道是哪个组件发起的。
+    queue, // 绑定更新队列，用于追踪和应用状态更新。
   ): any));
+
+  // 返回当前状态和 `dispatch` 函数，以便组件在后续可以通过 `dispatch` 更新状态。
   return [hook.memoizedState, dispatch];
 }
 
@@ -2628,17 +2644,34 @@ if (__DEV__) {
       mountHookTypesDev();
       return mountRef(initialValue);
     },
-    useState<S>(
-      initialState: (() => S) | S,
-    ): [S, Dispatch<BasicStateAction<S>>] {
-      currentHookNameInDev = 'useState';
-      mountHookTypesDev();
-      const prevDispatcher = ReactCurrentDispatcher.current;
+    useState < S > (
+      initialState: (() => S) | S, // initialState 可以是一个值或一个返回初始值的函数
+  ): [S, Dispatch < BasicStateAction < S >>] { // 返回一个状态值和一个用于更新该状态的函数
+      currentHookNameInDev = 'useState'; // 在开发模式下，设置当前 Hook 名称为 'useState'
+
+      mountHookTypesDev(); // 在开发模式下调用，用于记录当前 Hook 类型
+
+      const prevDispatcher = ReactCurrentDispatcher.current; // 保存当前的 Dispatcher 引用
+
       ReactCurrentDispatcher.current = InvalidNestedHooksDispatcherOnMountInDEV;
+      /*
+      在 Hook 初次挂载时，将 ReactCurrentDispatcher.current 替换为
+      InvalidNestedHooksDispatcherOnMountInDEV，这是一个特殊的调度器，
+      它用于在开发模式下检测不合法的 Hook 调用，例如在条件语句或循环中调用 Hook。
+      */
+
       try {
         return mountState(initialState);
+        /*
+        调用 mountState(initialState) 函数，实际创建和初始化状态。
+        mountState 是 React 用于创建和返回状态值及其更新函数的内部实现。
+        */
       } finally {
         ReactCurrentDispatcher.current = prevDispatcher;
+        /*
+        不论 try 块中的操作是否成功执行，最终都会恢复之前的 Dispatcher。
+        这样做是为了确保 Dispatcher 的状态在函数结束后是正确的，防止影响其他 Hook 的执行。
+        */
       }
     },
     useDebugValue<T>(value: T, formatterFn: ?(value: T) => mixed): void {
