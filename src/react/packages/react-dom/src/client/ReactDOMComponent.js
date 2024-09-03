@@ -346,22 +346,33 @@ function setInitialDOMProperties(
 }
 
 function updateDOMProperties(
-  domElement: Element,
-  updatePayload: Array<any>,
-  wasCustomComponentTag: boolean,
-  isCustomComponentTag: boolean,
+  domElement: Element,                  // 要更新的 DOM 元素
+  updatePayload: Array<any>,            // 更新负载数组，包含属性键值对
+  wasCustomComponentTag: boolean,       // 上一个组件是否是自定义组件
+  isCustomComponentTag: boolean,        // 当前组件是否是自定义组件
 ): void {
-  // TODO: Handle wasCustomComponentTag
+  console.log("updateDOMProperties...", updatePayload);
+  // TODO: 处理 wasCustomComponentTag
+  // 目前没有处理 `wasCustomComponentTag` 的逻辑，可能需要根据实际情况进行处理
+
+  // 遍历更新负载数组，每次取出一个属性键和值
   for (let i = 0; i < updatePayload.length; i += 2) {
-    const propKey = updatePayload[i];
-    const propValue = updatePayload[i + 1];
+    const propKey = updatePayload[i];          // 当前属性键
+    const propValue = updatePayload[i + 1];    // 当前属性值
+
+    // 根据属性键的不同处理不同的情况
     if (propKey === STYLE) {
+      // 如果属性键是 style，调用 setValueForStyles 函数设置样式
       setValueForStyles(domElement, propValue);
     } else if (propKey === DANGEROUSLY_SET_INNER_HTML) {
+      // 如果属性键是 dangerously_set_inner_html，调用 setInnerHTML 函数设置内嵌 HTML
       setInnerHTML(domElement, propValue);
     } else if (propKey === CHILDREN) {
+      // 如果属性键是 children，调用 setTextContent 函数设置文本内容
       setTextContent(domElement, propValue);
     } else {
+      // 对于其他属性，调用 setValueForProperty 函数设置属性值
+      // 需要传递 isCustomComponentTag 以处理自定义组件的情况
       setValueForProperty(domElement, propKey, propValue, isCustomComponentTag);
     }
   }
@@ -803,15 +814,16 @@ export function diffProperties(
 
 // Apply the diff.
 export function updateProperties(
-  domElement: Element,
-  updatePayload: Array<any>,
-  tag: string,
-  lastRawProps: Object,
-  nextRawProps: Object,
+  domElement: Element,                  // 要更新的 DOM 元素
+  updatePayload: Array<any>,            // 更新负载数组，包含属性键值对
+  tag: string,                          // 元素的标签名，如 'input', 'textarea', 'select'
+  lastRawProps: Object,                 // 上一个属性对象
+  nextRawProps: Object,                 // 当前属性对象
 ): void {
   // Update checked *before* name.
-  // In the middle of an update, it is possible to have multiple checked.
-  // When a checked radio tries to change name, browser makes another radio's checked false.
+  // 更新 checked 属性，优先于 name 属性。
+  // 在更新过程中，可能会有多个 checked。
+  // 当一个 checked 的 radio 元素尝试更改 name 属性时，浏览器会使另一个 radio 元素的 checked 属性变为 false。
   if (
     tag === 'input' &&
     nextRawProps.type === 'radio' &&
@@ -820,9 +832,11 @@ export function updateProperties(
     ReactDOMInputUpdateChecked(domElement, nextRawProps);
   }
 
+  // 判断当前组件和上一个组件是否为自定义组件
   const wasCustomComponentTag = isCustomComponent(tag, lastRawProps);
   const isCustomComponentTag = isCustomComponent(tag, nextRawProps);
-  // Apply the diff.
+
+  // 应用差异，更新 DOM 属性
   updateDOMProperties(
     domElement,
     updatePayload,
@@ -830,21 +844,20 @@ export function updateProperties(
     isCustomComponentTag,
   );
 
-  // TODO: Ensure that an update gets scheduled if any of the special props
-  // changed.
+  // TODO: 确保如果任何特殊属性发生更改，则会调度更新。
   switch (tag) {
     case 'input':
-      // Update the wrapper around inputs *after* updating props. This has to
-      // happen after `updateDOMProperties`. Otherwise HTML5 input validations
-      // raise warnings and prevent the new value from being assigned.
+      // 在更新属性之后更新 input 元素的包装器。
+      // 这必须发生在 `updateDOMProperties` 之后。
+      // 否则，HTML5 输入验证会引发警告，并阻止新值的分配。
       ReactDOMInputUpdateWrapper(domElement, nextRawProps);
       break;
     case 'textarea':
+      // 更新 textarea 元素的包装器
       ReactDOMTextareaUpdateWrapper(domElement, nextRawProps);
       break;
     case 'select':
-      // <select> value update needs to occur after <option> children
-      // reconciliation
+      // <select> 的值更新需要在 <option> 子元素的协调之后发生
       ReactDOMSelectPostUpdateWrapper(domElement, nextRawProps);
       break;
   }

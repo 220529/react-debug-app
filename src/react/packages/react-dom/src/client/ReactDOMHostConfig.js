@@ -566,6 +566,7 @@ export function removeChild(
   parentInstance: Instance,
   child: Instance | TextInstance | SuspenseInstance,
 ): void {
+  console.log("removeChild", child);
   parentInstance.removeChild(child);
 }
 
