@@ -351,7 +351,9 @@ function updateDOMProperties(
   wasCustomComponentTag: boolean,       // 上一个组件是否是自定义组件
   isCustomComponentTag: boolean,        // 当前组件是否是自定义组件
 ): void {
-  console.log("updateDOMProperties...", updatePayload);
+  if (updatePayload.length) {
+    console.log("updateDOMProperties...", updatePayload);
+  }
   // TODO: 处理 wasCustomComponentTag
   // 目前没有处理 `wasCustomComponentTag` 的逻辑，可能需要根据实际情况进行处理
 

@@ -1,5 +1,5 @@
 // import ForwardRef from "@/components/forwardRef"
-import Counter from "@/components/counter"
+// import Counter from "@/components/counter"
 // import Race from "@/components/race"
 // import Suspense from "@/components/suspense/index7"
 // import TodoList from "@/components/todoList"
@@ -10,6 +10,10 @@ import Counter from "@/components/counter"
 // import RenderList from "@/components/render-list/ReorderKey";
 
 // import SchedulerApp from "@/components/schedule";
+// import Virtualized from "@/components/virtualized";
+
+import TodoList from "@/components/todoList/NoKey"
+// import TodoList from "@/components/todoList/WithKey"
 
 function App() {
   // return <Test />
@@ -17,9 +21,11 @@ function App() {
     <div id="app">
       {/* <Race /> */}
       {/* <Suspense /> */}
-      <Counter />
+      {/* <Counter /> */}
       {/* <RenderList /> */}
       {/* <SchedulerApp /> */}
+      {/* <Virtualized /> */}
+      <TodoList />
     </div>
   );
 }

@@ -3003,17 +3003,20 @@ export function restorePendingUpdaters(root: FiberRoot, lanes: Lanes): void {
 const fakeActCallbackNode = {};
 function scheduleCallback(priorityLevel, callback) {
   if (__DEV__) {
-    // If we're currently inside an `act` scope, bypass Scheduler and push to
-    // the `act` queue instead.
+    // 如果在开发环境中
+    // 检查当前是否在 `act` 范围内，如果是，则绕过调度器，将回调推入 `act` 队列中
     const actQueue = ReactCurrentActQueue.current;
     if (actQueue !== null) {
-      actQueue.push(callback);
-      return fakeActCallbackNode;
+      // 如果 `actQueue` 存在，说明当前在 `act` 范围内
+      actQueue.push(callback); // 将回调函数推入 `actQueue`
+      return fakeActCallbackNode; // 返回一个假的回调节点（用于兼容性）
     } else {
+      // 如果不在 `act` 范围内，调用调度器的 `scheduleCallback` 函数
       return Scheduler_scheduleCallback(priorityLevel, callback);
     }
   } else {
-    // In production, always call Scheduler. This function will be stripped out.
+    // 在生产环境中，始终调用调度器的 `scheduleCallback` 函数
+    // 此代码在生产环境下会被剥离
     return Scheduler_scheduleCallback(priorityLevel, callback);
   }
 }
