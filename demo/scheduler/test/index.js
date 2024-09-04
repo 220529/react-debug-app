@@ -1,5 +1,7 @@
 import { unstable_scheduleCallback } from "./Schedule.js"
 
+console.log("unstable_scheduleCallback...");
+
 // 模拟函数的执行
 const sleep = delay => {
   for (let start = Date.now(); Date.now() - start <= delay;) { }

@@ -456,55 +456,50 @@ let taskTimeoutID = -1;
 // thread, like user events. By default, it yields multiple times per frame.
 // It does not attempt to align with frame boundaries, since most tasks don't
 // need to be frame aligned; for those that do, use requestAnimationFrame.
-let frameInterval = frameYieldMs;
-const continuousInputInterval = continuousYieldMs;
-const maxInterval = maxYieldMs;
-let startTime = -1;
+let frameInterval = frameYieldMs; // 处理帧间隔的时间
+const continuousInputInterval = continuousYieldMs; // 处理连续输入的时间
+const maxInterval = maxYieldMs; // 处理最大时间间隔
+let startTime = -1; // 记录开始时间的变量
 
-let needsPaint = false;
+let needsPaint = false; // 是否需要绘制标志
 
 function shouldYieldToHost() {
+  // 计算自上次调用以来经过的时间
   const timeElapsed = getCurrentTime() - startTime;
+
   if (timeElapsed < frameInterval) {
-    // The main thread has only been blocked for a really short amount of time;
-    // smaller than a single frame. Don't yield yet.
+    // 主线程被阻塞的时间非常短，少于一帧的时间。还不需要让出控制权。
     return false;
   }
 
-  // The main thread has been blocked for a non-negligible amount of time. We
-  // may want to yield control of the main thread, so the browser can perform
-  // high priority tasks. The main ones are painting and user input. If there's
-  // a pending paint or a pending input, then we should yield. But if there's
-  // neither, then we can yield less often while remaining responsive. We'll
-  // eventually yield regardless, since there could be a pending paint that
-  // wasn't accompanied by a call to `requestPaint`, or other main thread tasks
-  // like network events.
+  // 主线程被阻塞了一段较长的时间，我们可能需要让出控制权，以便浏览器可以执行高优先级任务。
+  // 高优先级任务主要包括绘制和用户输入。如果有待处理的绘制或输入，我们应该让出控制权。
+  // 如果没有这些任务，我们可以在保持响应性的同时减少让出控制权的频率。
+  // 我们最终会让出控制权，因为可能有未被处理的绘制任务或其他主线程任务（如网络事件）。
   if (enableIsInputPending) {
     if (needsPaint) {
-      // There's a pending paint (signaled by `requestPaint`). Yield now.
+      // 有待处理的绘制任务（通过 `requestPaint` 信号）。立即让出控制权。
       return true;
     }
     if (timeElapsed < continuousInputInterval) {
-      // We haven't blocked the thread for that long. Only yield if there's a
-      // pending discrete input (e.g. click). It's OK if there's pending
-      // continuous input (e.g. mouseover).
+      // 主线程被阻塞的时间不长。仅在有待处理的离散输入（例如点击）时才让出控制权。
+      // 对于待处理的连续输入（例如鼠标悬停），可以不立即让出控制权。
       if (isInputPending !== null) {
         return isInputPending();
       }
     } else if (timeElapsed < maxInterval) {
-      // Yield if there's either a pending discrete or continuous input.
+      // 主线程被阻塞的时间较长。如果有待处理的离散输入或连续输入，则立即让出控制权。
       if (isInputPending !== null) {
         return isInputPending(continuousOptions);
       }
     } else {
-      // We've blocked the thread for a long time. Even if there's no pending
-      // input, there may be some other scheduled work that we don't know about,
-      // like a network event. Yield now.
+      // 主线程被阻塞了很长时间。即使没有待处理的输入，也可能存在其他计划中的工作（如网络事件）。
+      // 立即让出控制权。
       return true;
     }
   }
 
-  // `isInputPending` isn't available. Yield now.
+  // `isInputPending` 函数不可用。立即让出控制权。
   return true;
 }
 
@@ -538,38 +533,41 @@ function forceFrameRate(fps) {
   }
 }
 
+// 执行调度的任务直到时间截止
 const performWorkUntilDeadline = () => {
+  // 如果存在已调度的任务回调，则开始执行
   if (scheduledHostCallback !== null) {
+    // 获取当前时间
     const currentTime = getCurrentTime();
-    // Keep track of the start time so we can measure how long the main thread
-    // has been blocked.
+    // 记录任务开始执行的时间
     startTime = currentTime;
+    // 假设当前有足够的时间来执行任务
     const hasTimeRemaining = true;
 
-    // If a scheduler task throws, exit the current browser task so the
-    // error can be observed.
-    //
-    // Intentionally not using a try-catch, since that makes some debugging
-    // techniques harder. Instead, if `scheduledHostCallback` errors, then
-    // `hasMoreWork` will remain true, and we'll continue the work loop.
+    // 定义一个标志，判断是否还有更多工作需要执行
     let hasMoreWork = true;
+
+    // 尝试执行调度的任务回调
     try {
+      // 执行回调函数并判断是否还有剩余任务需要执行
       hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime);
     } finally {
+      // 如果还有剩余工作需要执行
       if (hasMoreWork) {
-        // If there's more work, schedule the next message event at the end
-        // of the preceding one.
+        // 调度下一次任务执行
         schedulePerformWorkUntilDeadline();
       } else {
+        // 如果没有剩余任务需要执行，停止消息循环并清空调度回调
         isMessageLoopRunning = false;
         scheduledHostCallback = null;
       }
     }
   } else {
+    // 如果没有调度的任务回调，停止消息循环
     isMessageLoopRunning = false;
   }
-  // Yielding to the browser will give it a chance to paint, so we can
-  // reset this.
+
+  // 重置 needsPaint 标志，表示浏览器不需要立即执行绘制操作
   needsPaint = false;
 };
 
