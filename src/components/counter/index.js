@@ -6,11 +6,15 @@ const Count = () => {
     setCount(count + 1);
   };
 
+  useEffect(() => {
+    console.log("effect...start", count);
+    return () => {
+      console.log("effect...end", count);
+    };
+  }, [count]);
+
   return (
-    <div id='counter'>
-      <p>count: {count}</p>
-      <button onClick={handleIncrement}>Increment</button>
-    </div>
+    <button onClick={handleIncrement}>{count}</button>
   );
 };
 

@@ -1,5 +1,5 @@
 // import ForwardRef from "@/components/forwardRef"
-// import Counter from "@/components/counter"
+import Counter from "@/components/counter"
 // import Race from "@/components/race"
 // import Suspense from "@/components/suspense/index7"
 // import TodoList from "@/components/todoList"
@@ -21,11 +21,11 @@ function App() {
     <div id="app">
       {/* <Race /> */}
       {/* <Suspense /> */}
-      {/* <Counter /> */}
+      <Counter />
       {/* <RenderList /> */}
       {/* <SchedulerApp /> */}
       {/* <Virtualized /> */}
-      <TodoList />
+      {/* <TodoList /> */}
     </div>
   );
 }

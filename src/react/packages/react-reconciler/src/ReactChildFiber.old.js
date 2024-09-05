@@ -1306,6 +1306,7 @@ function ChildReconciler(shouldTrackSideEffects) {
 
     // 处理对象类型的子节点
     if (typeof newChild === 'object' && newChild !== null) {
+      // console.log("newChild.$$typeof", newChild.$$typeof);
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE:
           // 如果新子节点是一个 React 元素，则调用 `reconcileSingleElement` 函数进行协调，

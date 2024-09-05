@@ -115,81 +115,74 @@ if (__DEV__) {
   }
 }
 
+// 定义 FiberNode 类的构造函数，用于创建 React 的 Fiber 节点
 function FiberNode(
-  tag: WorkTag,
-  pendingProps: mixed,
-  key: null | string,
-  mode: TypeOfMode,
+  tag: WorkTag,           // 表示 Fiber 节点的类型（如 FunctionComponent、ClassComponent）
+  pendingProps: mixed,    // 此 Fiber 对应组件传入的最新属性（props）
+  key: null | string,     // 用于列表渲染中标识唯一性的 key
+  mode: TypeOfMode        // 当前 Fiber 节点的模式，如 ConcurrentMode 或 NoMode
 ) {
-  // Instance
-  this.tag = tag;
-  this.key = key;
-  this.elementType = null;
-  this.type = null;
-  this.stateNode = null;
+  // 组件实例相关的字段
+  this.tag = tag;                     // 节点的类型（如 HostComponent, ClassComponent 等）
+  this.key = key;                     // key 属性，用于优化列表渲染
+  this.elementType = null;            // JSX 元素的类型（如函数组件的函数本身）
+  this.type = null;                   // 组件的具体类型，可能是类或函数（与 elementType 类似）
+  this.stateNode = null;              // 与此 Fiber 节点关联的实际 DOM 或类实例
 
-  // Fiber
-  this.return = null;
-  this.child = null;
-  this.sibling = null;
-  this.index = 0;
+  // Fiber 树结构中的关系
+  this.return = null;                 // 指向父 Fiber
+  this.child = null;                  // 指向子 Fiber
+  this.sibling = null;                // 指向兄弟 Fiber
+  this.index = 0;                     // 该 Fiber 在父节点中的位置索引
 
-  this.ref = null;
+  this.ref = null;                    // 保存对 DOM 或类实例的引用，便于 ref 回调函数
 
-  this.pendingProps = pendingProps;
-  this.memoizedProps = null;
-  this.updateQueue = null;
-  this.memoizedState = null;
-  this.dependencies = null;
+  // 与更新相关的字段
+  this.pendingProps = pendingProps;   // 最新的 props
+  this.memoizedProps = null;          // 已保存的上一次渲染的 props
+  this.updateQueue = null;            // 更新队列，包含待处理的更新
+  this.memoizedState = null;          // 已保存的上一次渲染的 state
+  this.dependencies = null;           // 与此 Fiber 相关的上下文依赖
 
-  this.mode = mode;
+  this.mode = mode;                   // 当前 Fiber 所处的模式，如同步或异步模式
 
-  // Effects
-  this.flags = NoFlags;
-  this.subtreeFlags = NoFlags;
-  this.deletions = null;
+  // 副作用相关的字段
+  this.flags = NoFlags;               // 当前节点的副作用标志位，指示哪些操作需要执行（如更新、删除）
+  this.subtreeFlags = NoFlags;        // 子树的副作用标志位，指示整个子树中是否有需要处理的副作用
+  this.deletions = null;              // 需要删除的 Fiber 子节点数组
 
-  this.lanes = NoLanes;
-  this.childLanes = NoLanes;
+  // 优先级调度相关的字段
+  this.lanes = NoLanes;               // 当前 Fiber 节点的更新优先级
+  this.childLanes = NoLanes;          // 子树的更新优先级
 
-  this.alternate = null;
+  // 双缓存（alternate）相关
+  this.alternate = null;              // 用于指向当前 Fiber 的替代版本（即双缓存机制中的另一份 Fiber）
 
+  // 如果启用了 Profiler 计时器
   if (enableProfilerTimer) {
-    // Note: The following is done to avoid a v8 performance cliff.
-    //
-    // Initializing the fields below to smis and later updating them with
-    // double values will cause Fibers to end up having separate shapes.
-    // This behavior/bug has something to do with Object.preventExtension().
-    // Fortunately this only impacts DEV builds.
-    // Unfortunately it makes React unusably slow for some applications.
-    // To work around this, initialize the fields below with doubles.
-    //
-    // Learn more about this here:
-    // https://github.com/facebook/react/issues/14365
-    // https://bugs.chromium.org/p/v8/issues/detail?id=8538
-    this.actualDuration = Number.NaN;
-    this.actualStartTime = Number.NaN;
-    this.selfBaseDuration = Number.NaN;
-    this.treeBaseDuration = Number.NaN;
+    // 初始化以下字段为 NaN，以避免 V8 引擎的性能问题
+    this.actualDuration = Number.NaN;     // 当前 Fiber 执行的实际持续时间
+    this.actualStartTime = Number.NaN;    // 当前 Fiber 开始执行的时间
+    this.selfBaseDuration = Number.NaN;   // 不包括子 Fiber 的基础执行时间
+    this.treeBaseDuration = Number.NaN;   // 包括子 Fiber 的基础执行时间
 
-    // It's okay to replace the initial doubles with smis after initialization.
-    // This won't trigger the performance cliff mentioned above,
-    // and it simplifies other profiler code (including DevTools).
+    // 将这些字段初始化为实际值，以避免性能下降问题
     this.actualDuration = 0;
     this.actualStartTime = -1;
     this.selfBaseDuration = 0;
     this.treeBaseDuration = 0;
   }
 
+  // 开发模式下的调试字段
   if (__DEV__) {
-    // This isn't directly used but is handy for debugging internals:
-
-    this._debugSource = null;
-    this._debugOwner = null;
-    this._debugNeedsRemount = false;
-    this._debugHookTypes = null;
+    // 这些字段用于调试 Fiber 节点的内部状态
+    this._debugSource = null;            // 组件的源代码位置
+    this._debugOwner = null;             // 该 Fiber 的所有者（创建它的组件）
+    this._debugNeedsRemount = false;     // 用于指示是否需要重新挂载
+    this._debugHookTypes = null;         // 记录 hook 的类型
+    // 如果 Object.preventExtensions 可用，则防止该 Fiber 节点被扩展（提高调试安全性）
     if (!hasBadMapPolyfill && typeof Object.preventExtensions === 'function') {
-      Object.preventExtensions(this);
+      Object.preventExtensions(this);    // 禁止为此对象添加新属性
     }
   }
 }

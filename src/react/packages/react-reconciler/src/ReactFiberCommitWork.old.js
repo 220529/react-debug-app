@@ -509,86 +509,135 @@ function commitBeforeMutationEffectsDeletion(deletion: Fiber) {
   }
 }
 
+// 该函数用于处理 React 中 Hook 的卸载阶段副作用
+// 根据传入的 flags（如 HookPassive 或 HookLayout），执行相应的卸载操作
 function commitHookEffectListUnmount(
-  flags: HookFlags,
-  finishedWork: Fiber,
-  nearestMountedAncestor: Fiber | null,
+  flags: HookFlags,                 // 表示要卸载的副作用类型（如 HookPassive、HookLayout）
+  finishedWork: Fiber,              // 当前 fiber 节点，表示处理的组件
+  nearestMountedAncestor: Fiber | null // 最近的已挂载祖先节点，用于错误处理
 ) {
+  console.log("commitHookEffectListUnmount...");
+
+  // 获取当前 fiber 的更新队列，包含了组件的所有 effect
   const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
   const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+
+  // 如果有副作用链表，则执行卸载逻辑
   if (lastEffect !== null) {
+    // 获取第一个副作用
     const firstEffect = lastEffect.next;
     let effect = firstEffect;
+
+    // 循环遍历所有副作用，直到回到第一个副作用
     do {
+      // 检查副作用的 tag 是否匹配传入的 flags
       if ((effect.tag & flags) === flags) {
-        // Unmount
+        // 获取销毁函数，即在挂载阶段返回的 cleanup 函数
         const destroy = effect.destroy;
+
+        // 在卸载时需要清除销毁函数，防止重复执行
         effect.destroy = undefined;
+
+        // 如果存在销毁函数，则执行销毁逻辑
         if (destroy !== undefined) {
+          // 如果启用了性能分析工具，标记开始卸载
           if (enableSchedulingProfiler) {
             if ((flags & HookPassive) !== NoHookEffect) {
+              // 标记被动副作用卸载开始
               markComponentPassiveEffectUnmountStarted(finishedWork);
             } else if ((flags & HookLayout) !== NoHookEffect) {
+              // 标记布局副作用卸载开始
               markComponentLayoutEffectUnmountStarted(finishedWork);
             }
           }
 
+          // 开发模式下处理插入效果时，标记正在运行
           if (__DEV__) {
             if ((flags & HookInsertion) !== NoHookEffect) {
               setIsRunningInsertionEffect(true);
             }
           }
+
+          // 安全地执行销毁函数，确保销毁过程中的错误被正确捕获
           safelyCallDestroy(finishedWork, nearestMountedAncestor, destroy);
+
+          // 开发模式下处理插入效果结束，标记已完成
           if (__DEV__) {
             if ((flags & HookInsertion) !== NoHookEffect) {
               setIsRunningInsertionEffect(false);
             }
           }
 
+          // 如果启用了性能分析工具，标记卸载结束
           if (enableSchedulingProfiler) {
             if ((flags & HookPassive) !== NoHookEffect) {
+              // 标记被动副作用卸载结束
               markComponentPassiveEffectUnmountStopped();
             } else if ((flags & HookLayout) !== NoHookEffect) {
+              // 标记布局副作用卸载结束
               markComponentLayoutEffectUnmountStopped();
             }
           }
         }
       }
+
+      // 移动到下一个副作用
       effect = effect.next;
-    } while (effect !== firstEffect);
+    } while (effect !== firstEffect); // 遍历链表，直到回到第一个副作用结束循环
   }
 }
 
+// 该函数用于处理 React 中的 Hook 的挂载阶段的副作用（如 useEffect 或 useLayoutEffect）
+// 根据传入的 flag 类型（如 HookPassive 或 HookLayout），来执行相应的副作用
+
 function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
+  console.log("commitHookEffectListMount...");
+  // 获取当前 fiber 的更新队列
   const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
   const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+
+  // 如果有副作用链表，则执行挂载副作用
   if (lastEffect !== null) {
+    // 获取第一个副作用
     const firstEffect = lastEffect.next;
     let effect = firstEffect;
+
+    // 循环遍历所有副作用，直到回到第一个副作用
     do {
+      // 检查当前副作用是否与传入的 flags 匹配
       if ((effect.tag & flags) === flags) {
+
+        // 开启性能分析器时，会标记副作用挂载的开始与结束
         if (enableSchedulingProfiler) {
           if ((flags & HookPassive) !== NoHookEffect) {
+            // 标记被动副作用的挂载开始
             markComponentPassiveEffectMountStarted(finishedWork);
           } else if ((flags & HookLayout) !== NoHookEffect) {
+            // 标记布局副作用的挂载开始
             markComponentLayoutEffectMountStarted(finishedWork);
           }
         }
 
-        // Mount
+        // 挂载阶段，调用副作用的 create 函数，通常是 useEffect 的回调
         const create = effect.create;
         if (__DEV__) {
+          // 如果是插入副作用（如 useInsertionEffect），则标记当前正在运行插入效果
           if ((flags & HookInsertion) !== NoHookEffect) {
             setIsRunningInsertionEffect(true);
           }
         }
+
+        // 执行 create 函数并将其返回值（销毁函数）保存到 effect.destroy 中
         effect.destroy = create();
+
         if (__DEV__) {
+          // 标记插入效果结束
           if ((flags & HookInsertion) !== NoHookEffect) {
             setIsRunningInsertionEffect(false);
           }
         }
 
+        // 结束性能分析器的标记
         if (enableSchedulingProfiler) {
           if ((flags & HookPassive) !== NoHookEffect) {
             markComponentPassiveEffectMountStopped();
@@ -597,9 +646,11 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
           }
         }
 
+        // 开发环境下，检查销毁函数的合法性
         if (__DEV__) {
           const destroy = effect.destroy;
           if (destroy !== undefined && typeof destroy !== 'function') {
+            // 根据副作用类型，输出相应的 Hook 名称
             let hookName;
             if ((effect.tag & HookLayout) !== NoFlags) {
               hookName = 'useLayoutEffect';
@@ -608,10 +659,11 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
             } else {
               hookName = 'useEffect';
             }
+
+            // 输出详细的错误信息，如果销毁函数不符合要求
             let addendum;
             if (destroy === null) {
-              addendum =
-                ' You returned null. If your effect does not require clean ' +
+              addendum = ' You returned null. If your effect does not require clean ' +
                 'up, return undefined (or nothing).';
             } else if (typeof destroy.then === 'function') {
               addendum =
@@ -633,6 +685,8 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
             } else {
               addendum = ' You returned: ' + destroy;
             }
+
+            // 打印错误信息，提示用户副作用函数返回了非法的值
             console.error(
               '%s must not return anything besides a function, ' +
               'which is used for clean-up.%s',
@@ -642,8 +696,10 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
           }
         }
       }
+
+      // 移动到下一个副作用
       effect = effect.next;
-    } while (effect !== firstEffect);
+    } while (effect !== firstEffect); // 如果回到第一个副作用，结束循环
   }
 }
 
@@ -2790,6 +2846,7 @@ function commitPassiveMountOnFiber(
       ) {
         startPassiveEffectTimer();
         try {
+          console.log("commitHookEffectListMount...");
           commitHookEffectListMount(HookPassive | HookHasEffect, finishedWork);
         } finally {
           recordPassiveEffectDuration(finishedWork);
