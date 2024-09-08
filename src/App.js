@@ -7,13 +7,15 @@ import Counter from "@/components/counter"
 
 // import RenderList from "@/components/render-list/NoKey";
 // import RenderList from "@/components/render-list/RandomKey";
-// import RenderList from "@/components/render-list/ReorderKey";
+import RenderList from "@/components/render-list/ReorderKey";
 
 // import SchedulerApp from "@/components/schedule";
 // import Virtualized from "@/components/virtualized";
 
-import TodoList from "@/components/todoList/NoKey"
+// import TodoList from "@/components/todoList/NoKey"
 // import TodoList from "@/components/todoList/WithKey"
+
+import RequestAnimationFrameApp from "@/components/RequestAnimationFrameApp"
 
 function App() {
   // return <Test />
@@ -21,11 +23,12 @@ function App() {
     <div id="app">
       {/* <Race /> */}
       {/* <Suspense /> */}
-      <Counter />
-      {/* <RenderList /> */}
+      {/* <Counter /> */}
+      <RenderList />
       {/* <SchedulerApp /> */}
       {/* <Virtualized /> */}
       {/* <TodoList /> */}
+      {/* <RequestAnimationFrameApp /> */}
     </div>
   );
 }

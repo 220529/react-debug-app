@@ -185,7 +185,7 @@ function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
 }
 
 export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
-  // Early bailout if there's no pending work left.
+  // 提前终止：如果没有待处理的工作，直接返回 NoLanes
   const pendingLanes = root.pendingLanes;
   if (pendingLanes === NoLanes) {
     return NoLanes;
@@ -193,101 +193,76 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
 
   let nextLanes = NoLanes;
 
+  // 获取挂起和重新激活的 lanes
   const suspendedLanes = root.suspendedLanes;
   const pingedLanes = root.pingedLanes;
 
-  // Do not work on any idle work until all the non-idle work has finished,
-  // even if the work is suspended.
+  // 处理非空闲任务（优先级较高的任务），直到所有非空闲任务完成
   const nonIdlePendingLanes = pendingLanes & NonIdleLanes;
   if (nonIdlePendingLanes !== NoLanes) {
+    // 找到所有未挂起的非空闲任务
     const nonIdleUnblockedLanes = nonIdlePendingLanes & ~suspendedLanes;
     if (nonIdleUnblockedLanes !== NoLanes) {
+      // 获取优先级最高的 lane
       nextLanes = getHighestPriorityLanes(nonIdleUnblockedLanes);
     } else {
+      // 否则查看是否有已激活的非空闲任务
       const nonIdlePingedLanes = nonIdlePendingLanes & pingedLanes;
       if (nonIdlePingedLanes !== NoLanes) {
+        // 获取优先级最高的 lane
         nextLanes = getHighestPriorityLanes(nonIdlePingedLanes);
       }
     }
   } else {
-    // The only remaining work is Idle.
+    // 如果没有非空闲任务，只剩下空闲任务
     const unblockedLanes = pendingLanes & ~suspendedLanes;
     if (unblockedLanes !== NoLanes) {
+      // 获取优先级最高的空闲任务
       nextLanes = getHighestPriorityLanes(unblockedLanes);
     } else {
+      // 如果有重新激活的空闲任务，获取优先级最高的任务
       if (pingedLanes !== NoLanes) {
         nextLanes = getHighestPriorityLanes(pingedLanes);
       }
     }
   }
 
+  // 如果没有找到可执行的任务，返回 NoLanes
   if (nextLanes === NoLanes) {
-    // This should only be reachable if we're suspended
-    // TODO: Consider warning in this path if a fallback timer is not scheduled.
+    // 这个情况只会发生在所有任务被挂起时
     return NoLanes;
   }
 
-  // If we're already in the middle of a render, switching lanes will interrupt
-  // it and we'll lose our progress. We should only do this if the new lanes are
-  // higher priority.
+  // 如果当前有正在处理的任务，不要轻易切换任务，除非新任务优先级更高
   if (
     wipLanes !== NoLanes &&
     wipLanes !== nextLanes &&
-    // If we already suspended with a delay, then interrupting is fine. Don't
-    // bother waiting until the root is complete.
     (wipLanes & suspendedLanes) === NoLanes
   ) {
     const nextLane = getHighestPriorityLane(nextLanes);
     const wipLane = getHighestPriorityLane(wipLanes);
     if (
-      // Tests whether the next lane is equal or lower priority than the wip
-      // one. This works because the bits decrease in priority as you go left.
+      // 如果新任务优先级小于等于正在处理的任务优先级，则继续处理当前任务
       nextLane >= wipLane ||
-      // Default priority updates should not interrupt transition updates. The
-      // only difference between default updates and transition updates is that
-      // default updates do not support refresh transitions.
+      // 默认优先级任务不应该打断 transition 更新
       (nextLane === DefaultLane && (wipLane & TransitionLanes) !== NoLanes)
     ) {
-      // Keep working on the existing in-progress tree. Do not interrupt.
       return wipLanes;
     }
   }
 
+  // 处理并发模式
   if (
     allowConcurrentByDefault &&
     (root.current.mode & ConcurrentUpdatesByDefaultMode) !== NoMode
   ) {
-    // Do nothing, use the lanes as they were assigned.
+    // 什么都不做，继续使用分配的 lanes
   } else if ((nextLanes & InputContinuousLane) !== NoLanes) {
-    // When updates are sync by default, we entangle continuous priority updates
-    // and default updates, so they render in the same batch. The only reason
-    // they use separate lanes is because continuous updates should interrupt
-    // transitions, but default updates should not.
+    // 在同步默认更新时，将连续优先级更新和默认更新绑定在一起
     nextLanes |= pendingLanes & DefaultLane;
   }
 
-  // Check for entangled lanes and add them to the batch.
-  //
-  // A lane is said to be entangled with another when it's not allowed to render
-  // in a batch that does not also include the other lane. Typically we do this
-  // when multiple updates have the same source, and we only want to respond to
-  // the most recent event from that source.
-  //
-  // Note that we apply entanglements *after* checking for partial work above.
-  // This means that if a lane is entangled during an interleaved event while
-  // it's already rendering, we won't interrupt it. This is intentional, since
-  // entanglement is usually "best effort": we'll try our best to render the
-  // lanes in the same batch, but it's not worth throwing out partially
-  // completed work in order to do it.
-  // TODO: Reconsider this. The counter-argument is that the partial work
-  // represents an intermediate state, which we don't want to show to the user.
-  // And by spending extra time finishing it, we're increasing the amount of
-  // time it takes to show the final state, which is what they are actually
-  // waiting for.
-  //
-  // For those exceptions where entanglement is semantically important, like
-  // useMutableSource, we should ensure that there is no partial work at the
-  // time we apply the entanglement.
+  // 检查并处理被牵连的 lanes
   const entangledLanes = root.entangledLanes;
   if (entangledLanes !== NoLanes) {
     const entanglements = root.entanglements;
@@ -296,12 +271,15 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
       const index = pickArbitraryLaneIndex(lanes);
       const lane = 1 << index;
 
+      // 把被牵连的 lanes 加入当前要处理的 lanes 中
       nextLanes |= entanglements[index];
 
+      // 清除当前 lane
       lanes &= ~lane;
     }
   }
 
+  // 返回最终的 nextLanes
   return nextLanes;
 }
 

@@ -668,6 +668,7 @@ export function isUnsafeClassRenderPhaseUpdate(fiber: Fiber) {
 // 我们将检查现有任务的优先级是否与 root 在下一个层级的优先级相同。
 // 这个函数在每次更新时被调用，并在任务即将结束时调用。
 function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
+  // console.log("ensureRootIsScheduled...", root, currentTime);
   // 获取现有的回调节点（如果存在）
   const existingCallbackNode = root.callbackNode;
 
@@ -1746,6 +1747,7 @@ function workLoopSync() {
 }
 
 function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
+  console.log("renderRootConcurrent...");
   const prevExecutionContext = executionContext;
   executionContext |= RenderContext;
   const prevDispatcher = pushDispatcher();

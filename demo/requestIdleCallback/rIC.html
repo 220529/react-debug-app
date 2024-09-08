@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom requestIdleCallback Implementation</title>
+</head>
+
+<body>
+  <h1>Testing Custom requestIdleCallback</h1>
+
+  <script>
+    // requestIdleCallback polyfill using requestAnimationFrame and postMessage
+    (function () {
+      var scheduledIdleCallback = null;
+      var frameDeadline = 0;
+      var frameTime = 50; // Set frame time to 50ms for simulation (20fps)
+
+      var deadline = {
+        timeRemaining: function () {
+          return Math.max(0, frameDeadline - performance.now());
+        }
+      };
+
+      function idleTick() {
+        // If there is a callback, execute it
+        if (scheduledIdleCallback) {
+          var callback = scheduledIdleCallback;
+          scheduledIdleCallback = null;
+          callback(deadline);
+        }
+      }
+
+      window.addEventListener('message', function (event) {
+        // Ignore unrelated messages
+        if (event.data === 'customIdleCallback') {
+          idleTick();
+        }
+      }, false);
+
+      function animationTick(rafTime) {
+        frameDeadline = rafTime + frameTime; // Set the deadline for this frame
+        window.postMessage('customIdleCallback', '*'); // Break the execution stack and trigger idleTick
+      }
+
+      window.requestIdleCallback = function (callback) {
+        scheduledIdleCallback = callback;
+        requestAnimationFrame(animationTick); // Schedule for next animation frame
+      };
+    })();
+
+    // Testing the custom requestIdleCallback
+    requestIdleCallback(function (deadline) {
+      console.log('Idle callback executed');
+      console.log('Time remaining: ' + deadline.timeRemaining() + 'ms');
+      // Perform some low-priority task here
+      for (let i = 0; i < 1000000; i++) { } // Example task
+      console.log('Task done');
+    });
+
+  </script>
+</body>
+
+</html>

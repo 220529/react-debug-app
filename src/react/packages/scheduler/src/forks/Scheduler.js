@@ -580,6 +580,7 @@ function forceFrameRate(fps) {
 
 // 执行调度的任务直到时间截止
 const performWorkUntilDeadline = () => {
+  // console.log("performWorkUntilDeadline");
   // 如果存在已调度的任务回调，则开始执行
   if (scheduledHostCallback !== null) {
     // 获取当前时间
@@ -650,6 +651,8 @@ if (typeof localSetImmediate === 'function') {
 }
 
 function requestHostCallback(callback) {
+  // console.log("requestHostCallback", callback);
+
   // 把传入的回调函数存储到全局变量 `scheduledHostCallback` 中
   scheduledHostCallback = callback;
 
