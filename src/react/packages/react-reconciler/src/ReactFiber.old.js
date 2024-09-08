@@ -238,90 +238,101 @@ export function resolveLazyComponentTag(Component: Function): WorkTag {
   return IndeterminateComponent;
 }
 
-// This is used to create an alternate fiber to do work on.
+/**
+ * 该函数用于创建当前 Fiber 节点的 alternate（备用 fiber 节点），
+ * 用于在新的渲染周期中进行工作。
+ *
+ * @param current 当前正在工作的 Fiber 节点。
+ * @param pendingProps 传入的新的待处理属性。
+ * @returns 返回一个新的或者复用的 Fiber 节点。
+ */
 export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
+  // 检查当前 Fiber 节点是否已经有一个备用节点
   let workInProgress = current.alternate;
+
   if (workInProgress === null) {
-    // We use a double buffering pooling technique because we know that we'll
-    // only ever need at most two versions of a tree. We pool the "other" unused
-    // node that we're free to reuse. This is lazily created to avoid allocating
-    // extra objects for things that are never updated. It also allow us to
-    // reclaim the extra memory if needed.
+    // 如果没有备用 Fiber 节点，创建一个新的
+    // 使用双缓冲技术来减少对象分配，保证最多有两份 Fiber 树
+    // 懒加载创建 alternate 以避免不必要的内存分配
+    // 这样当节点不更新时可以回收内存
     workInProgress = createFiber(
       current.tag,
       pendingProps,
       current.key,
       current.mode,
     );
+
+    // 复制现有 Fiber 节点的一些属性到备用节点上
     workInProgress.elementType = current.elementType;
     workInProgress.type = current.type;
     workInProgress.stateNode = current.stateNode;
 
+    // 开发模式下，复制一些调试相关的字段
     if (__DEV__) {
-      // DEV-only fields
-
       workInProgress._debugSource = current._debugSource;
       workInProgress._debugOwner = current._debugOwner;
       workInProgress._debugHookTypes = current._debugHookTypes;
     }
 
+    // 互相引用 alternate，形成双向链接
     workInProgress.alternate = current;
     current.alternate = workInProgress;
   } else {
+    // 如果已经有一个备用 Fiber 节点，则复用它
     workInProgress.pendingProps = pendingProps;
-    // Needed because Blocks store data on type.
+
+    // 更新 type，Blocks 类型组件会存储数据在 type 上
     workInProgress.type = current.type;
 
-    // We already have an alternate.
-    // Reset the effect tag.
+    // 重置 effect 标记，因为已经有 alternate 节点
     workInProgress.flags = NoFlags;
 
-    // The effects are no longer valid.
+    // 清除无效的子树效果
     workInProgress.subtreeFlags = NoFlags;
     workInProgress.deletions = null;
 
+    // 如果启用了 Profiler Timer，则重置时间相关的属性
     if (enableProfilerTimer) {
-      // We intentionally reset, rather than copy, actualDuration & actualStartTime.
-      // This prevents time from endlessly accumulating in new commits.
-      // This has the downside of resetting values for different priority renders,
-      // But works for yielding (the common case) and should support resuming.
       workInProgress.actualDuration = 0;
       workInProgress.actualStartTime = -1;
     }
   }
 
-  // Reset all effects except static ones.
-  // Static effects are not specific to a render.
+  // 重置所有非静态的效果标记
   workInProgress.flags = current.flags & StaticMask;
+
+  // 复制 lanes 和 childLanes 用于调度优先级
   workInProgress.childLanes = current.childLanes;
   workInProgress.lanes = current.lanes;
 
+  // 复制 Fiber 节点的子节点、已记忆的属性和状态
   workInProgress.child = current.child;
   workInProgress.memoizedProps = current.memoizedProps;
   workInProgress.memoizedState = current.memoizedState;
   workInProgress.updateQueue = current.updateQueue;
 
-  // Clone the dependencies object. This is mutated during the render phase, so
-  // it cannot be shared with the current fiber.
+  // 克隆依赖关系对象，防止渲染阶段修改时与当前 Fiber 共享
   const currentDependencies = current.dependencies;
   workInProgress.dependencies =
     currentDependencies === null
       ? null
       : {
-          lanes: currentDependencies.lanes,
-          firstContext: currentDependencies.firstContext,
-        };
+        lanes: currentDependencies.lanes,
+        firstContext: currentDependencies.firstContext,
+      };
 
-  // These will be overridden during the parent's reconciliation
+  // 这些字段在父组件的协调过程中会被覆盖
   workInProgress.sibling = current.sibling;
   workInProgress.index = current.index;
   workInProgress.ref = current.ref;
 
+  // 如果启用了 Profiler Timer，复制一些基础持续时间数据
   if (enableProfilerTimer) {
     workInProgress.selfBaseDuration = current.selfBaseDuration;
     workInProgress.treeBaseDuration = current.treeBaseDuration;
   }
 
+  // 开发模式下，处理热重载相关逻辑
   if (__DEV__) {
     workInProgress._debugNeedsRemount = current._debugNeedsRemount;
     switch (workInProgress.tag) {
@@ -419,42 +430,47 @@ export function resetWorkInProgress(workInProgress: Fiber, renderLanes: Lanes) {
 }
 
 export function createHostRootFiber(
-  tag: RootTag,
-  isStrictMode: boolean,
-  concurrentUpdatesByDefaultOverride: null | boolean,
+  tag: RootTag,                                // 根节点的类型，可能是 ConcurrentRoot 或 LegacyRoot
+  isStrictMode: boolean,                       // 是否开启严格模式
+  concurrentUpdatesByDefaultOverride: null | boolean, // 强制并发更新模式的覆盖选项
 ): Fiber {
-  let mode;
-  if (tag === ConcurrentRoot) {
-    mode = ConcurrentMode;
-    if (isStrictMode === true) {
-      mode |= StrictLegacyMode;
+  let mode;                                    // 用于定义 Fiber 节点的工作模式
 
+  // 检查根节点类型是否为 ConcurrentRoot，即是否启用并发模式
+  if (tag === ConcurrentRoot) {
+    mode = ConcurrentMode;                     // 并发模式
+    if (isStrictMode === true) {
+      mode |= StrictLegacyMode;                // 开启严格模式的遗留支持
+
+      // 如果启用了 StrictEffectsMode，则启用严格的副作用模式
       if (enableStrictEffects) {
-        mode |= StrictEffectsMode;
+        mode |= StrictEffectsMode;             // 严格模式下的副作用检测
       }
-    } else if (enableStrictEffects && createRootStrictEffectsByDefault) {
-      mode |= StrictLegacyMode | StrictEffectsMode;
     }
+    // 如果默认情况下开启严格的副作用模式
+    else if (enableStrictEffects && createRootStrictEffectsByDefault) {
+      mode |= StrictLegacyMode | StrictEffectsMode; // 严格模式和副作用模式
+    }
+
+    // 针对同步默认更新和内部实验的处理
     if (
-      // We only use this flag for our repo tests to check both behaviors.
-      // TODO: Flip this flag and rename it something like "forceConcurrentByDefaultForTesting"
-      !enableSyncDefaultUpdates ||
-      // Only for internal experiments.
-      (allowConcurrentByDefault && concurrentUpdatesByDefaultOverride)
+      !enableSyncDefaultUpdates ||             // 如果未启用同步默认更新
+      (allowConcurrentByDefault && concurrentUpdatesByDefaultOverride) // 或者强制并发更新模式
     ) {
-      mode |= ConcurrentUpdatesByDefaultMode;
+      mode |= ConcurrentUpdatesByDefaultMode;  // 启用并发更新模式
     }
   } else {
+    // 如果不是并发模式的根节点，则设置为没有特殊模式
     mode = NoMode;
   }
 
+  // 如果启用了 Profiler 定时器，并且存在开发工具
   if (enableProfilerTimer && isDevToolsPresent) {
-    // Always collect profile timings when DevTools are present.
-    // This enables DevTools to start capturing timing at any point–
-    // Without some nodes in the tree having empty base times.
-    mode |= ProfileMode;
+    // 启用 Profile 模式以收集性能剖析信息
+    mode |= ProfileMode;                       // 启用性能分析模式
   }
 
+  // 创建根 Fiber 节点，类型为 HostRoot，传递 null 作为 key 和 type，模式为刚刚确定的 mode
   return createFiber(HostRoot, null, null, mode);
 }
 

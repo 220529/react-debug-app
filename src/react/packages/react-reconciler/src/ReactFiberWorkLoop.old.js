@@ -1644,86 +1644,103 @@ export function renderHasNotSuspendedYet(): boolean {
 }
 
 function renderRootSync(root: FiberRoot, lanes: Lanes) {
+  // 保存之前的执行上下文和调度器
   const prevExecutionContext = executionContext;
   executionContext |= RenderContext;
   const prevDispatcher = pushDispatcher();
 
-  // If the root or lanes have changed, throw out the existing stack
-  // and prepare a fresh one. Otherwise we'll continue where we left off.
+  // 如果根节点或 lanes 发生变化，则丢弃现有的栈并准备一个新的栈
   if (workInProgressRoot !== root || workInProgressRootRenderLanes !== lanes) {
     if (enableUpdaterTracking) {
       if (isDevToolsPresent) {
+        // 如果存在开发者工具，将待处理的更新器恢复到根节点
         const memoizedUpdaters = root.memoizedUpdaters;
         if (memoizedUpdaters.size > 0) {
           restorePendingUpdaters(root, workInProgressRootRenderLanes);
           memoizedUpdaters.clear();
         }
 
-        // At this point, move Fibers that scheduled the upcoming work from the Map to the Set.
-        // If we bailout on this work, we'll move them back (like above).
-        // It's important to move them now in case the work spawns more work at the same priority with different updaters.
-        // That way we can keep the current update and future updates separate.
+        // 将调度了即将工作的 Fiber 从 Map 移动到 Set 中
+        // 如果我们在此工作中中止，将它们移回去
         movePendingFibersToMemoized(root, lanes);
       }
     }
 
+    // 获取当前渲染 lanes 的过渡信息
     workInProgressTransitions = getTransitionsForLanes(root, lanes);
+    // 准备新的工作栈
     prepareFreshStack(root, lanes);
   }
 
+  // 开发模式下，启用调试跟踪，记录渲染开始
   if (__DEV__) {
     if (enableDebugTracing) {
       logRenderStarted(lanes);
     }
   }
 
+  // 启用调度性能分析，标记渲染开始
   if (enableSchedulingProfiler) {
     markRenderStarted(lanes);
   }
 
+  // 开始工作循环，处理 Fiber 树的渲染
   do {
     try {
-      workLoopSync();
-      break;
+      workLoopSync(); // 同步执行工作循环
+      break; // 如果没有异常，则退出循环
     } catch (thrownValue) {
-      handleError(root, thrownValue);
+      handleError(root, thrownValue); // 捕获并处理错误
     }
   } while (true);
+
+  // 重置上下文依赖
   resetContextDependencies();
 
+  // 恢复之前的执行上下文和调度器
   executionContext = prevExecutionContext;
   popDispatcher(prevDispatcher);
 
+  // 检查是否渲染完成
   if (workInProgress !== null) {
-    // This is a sync render, so we should have finished the whole tree.
+    // 如果工作进度不为空，则抛出错误，表示渲染未完成
     throw new Error(
       'Cannot commit an incomplete root. This error is likely caused by a ' +
-        'bug in React. Please file an issue.',
+      'bug in React. Please file an issue.',
     );
   }
 
+  // 开发模式下，启用调试跟踪，记录渲染停止
   if (__DEV__) {
     if (enableDebugTracing) {
       logRenderStopped();
     }
   }
 
+  // 启用调度性能分析，标记渲染停止
   if (enableSchedulingProfiler) {
     markRenderStopped();
   }
 
-  // Set this to null to indicate there's no in-progress render.
+  // 设置工作进度根节点为 null，表示没有进行中的渲染
   workInProgressRoot = null;
   workInProgressRootRenderLanes = NoLanes;
 
+  // 返回当前渲染的状态
   return workInProgressRootExitStatus;
 }
 
 // The work loop is an extremely hot path. Tell Closure not to inline it.
 /** @noinline */
 function workLoopSync() {
-  // Already timed out, so perform work without checking if we need to yield.
+  console.log("workLoopSync...");
+  // 已经超时，所以执行工作时不再检查是否需要让步给浏览器。
+  // React 在并发模式下会定期检查是否需要暂停渲染，以避免长时间占用主线程导致界面卡顿。
+  // 但在同步模式下（如这里的 `workLoopSync`），不需要做这种检查。
+
   while (workInProgress !== null) {
+    // `workInProgress` 表示当前正在处理的 Fiber 节点。
+    // 调用 `performUnitOfWork` 来处理当前的 Fiber 节点的工作。
     performUnitOfWork(workInProgress);
   }
 }
@@ -1817,30 +1834,45 @@ function workLoopConcurrent() {
 }
 
 function performUnitOfWork(unitOfWork: Fiber): void {
-  // The current, flushed, state of this fiber is the alternate. Ideally
-  // nothing should rely on this, but relying on it here means that we don't
-  // need an additional field on the work in progress.
+  // 获取当前 Fiber 的备用状态（alternate）
+  // 理想情况下，其他代码不应依赖于此，但依赖于此可避免在工作进程中增加额外的字段
   const current = unitOfWork.alternate;
+
+  // 设置当前调试 Fiber（仅在开发模式下）
   setCurrentDebugFiberInDEV(unitOfWork);
 
   let next;
+
+  // 如果启用性能分析器且 Fiber 的模式包含 ProfileMode
   if (enableProfilerTimer && (unitOfWork.mode & ProfileMode) !== NoMode) {
+    // 启动性能分析器计时器
     startProfilerTimer(unitOfWork);
+
+    // 开始处理当前 Fiber 的工作
     next = beginWork(current, unitOfWork, subtreeRenderLanes);
+
+    // 停止性能分析器计时器并记录时间差
     stopProfilerTimerIfRunningAndRecordDelta(unitOfWork, true);
   } else {
+    // 不启用性能分析器，则直接处理当前 Fiber 的工作
     next = beginWork(current, unitOfWork, subtreeRenderLanes);
   }
 
+  // 重置调试 Fiber（仅在开发模式下）
   resetCurrentDebugFiberInDEV();
+
+  // 更新当前 Fiber 的 memoizedProps
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
+
+  // 如果 `next` 为 null，表示没有新工作被生成，完成当前工作
   if (next === null) {
-    // If this doesn't spawn new work, complete the current work.
     completeUnitOfWork(unitOfWork);
   } else {
+    // 否则，将 `workInProgress` 设置为下一个工作单元
     workInProgress = next;
   }
 
+  // 清空 ReactCurrentOwner
   ReactCurrentOwner.current = null;
 }
 

@@ -316,12 +316,25 @@ function ChildReconciler(shouldTrackSideEffects) {
     return existingChildren;
   }
 
+  /**
+   * 使用给定的 Fiber 节点和待处理属性创建一个新的 Fiber 节点副本。
+   *
+   * @param fiber 当前的 Fiber 节点。
+   * @param pendingProps 新的待处理属性。
+   * @returns 返回新的 Fiber 节点副本。
+   */
   function useFiber(fiber: Fiber, pendingProps: mixed): Fiber {
-    // We currently set sibling to null and index to 0 here because it is easy
-    // to forget to do before returning it. E.g. for the single child case.
+    // 使用当前 Fiber 节点和待处理属性创建一个新的备用 Fiber 节点副本
+    // 这里将 sibling 设置为 null 和 index 设置为 0 是为了避免在返回之前忘记做这些设置。
+    // 例如，在处理只有一个子节点的情况时，这一点尤为重要。
     const clone = createWorkInProgress(fiber, pendingProps);
+
+    // 初始化新节点的 sibling 和 index 属性
+    // sibling 设置为 null 表示该节点没有兄弟节点
     clone.index = 0;
+    // index 设置为 0 以确保在遍历子节点时保持一致
     clone.sibling = null;
+
     return clone;
   }
 

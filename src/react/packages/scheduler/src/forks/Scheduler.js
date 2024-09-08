@@ -200,58 +200,103 @@ function flushWork(hasTimeRemaining, initialTime) {
 }
 
 function workLoop(hasTimeRemaining, initialTime) {
+  // 初始化当前时间为传入的时间
   let currentTime = initialTime;
+
+  // 更新定时器（处理那些到期的定时器任务）
   advanceTimers(currentTime);
+
+  // 获取任务队列中的第一个任务
   currentTask = peek(taskQueue);
+
+  // 进入任务循环，循环条件：
+  // - 任务队列中存在任务
+  // - 调试模式下，调度器未被暂停
   while (
     currentTask !== null &&
     !(enableSchedulerDebugging && isSchedulerPaused)
   ) {
+    // 判断当前任务是否超过了它的到期时间，并且是否应该放弃继续执行
     if (
       currentTask.expirationTime > currentTime &&
       (!hasTimeRemaining || shouldYieldToHost())
     ) {
-      // This currentTask hasn't expired, and we've reached the deadline.
+      // 当前任务还没到期，并且时间不够或应该让出执行权，退出循环
       break;
     }
+
+    // 获取当前任务的回调函数
     const callback = currentTask.callback;
+
+    // 如果当前任务存在回调函数
     if (typeof callback === 'function') {
+      // 将当前任务的回调函数清空，避免重复执行
       currentTask.callback = null;
+
+      // 记录当前的优先级
       currentPriorityLevel = currentTask.priorityLevel;
+
+      // 检查任务是否超时（到期时间是否小于等于当前时间）
       const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
+
+      // 如果启用了性能分析，标记任务开始执行
       if (enableProfiling) {
         markTaskRun(currentTask, currentTime);
       }
+
+      // 执行当前任务的回调函数，传入是否超时的标志
       const continuationCallback = callback(didUserCallbackTimeout);
+
+      // 更新当前时间
       currentTime = getCurrentTime();
+
+      // 如果回调返回的是一个函数，表示任务未完全结束，需要继续执行
       if (typeof continuationCallback === 'function') {
+        // 将任务的回调更新为继续回调
         currentTask.callback = continuationCallback;
+
+        // 如果启用了性能分析，标记任务被挂起
         if (enableProfiling) {
           markTaskYield(currentTask, currentTime);
         }
       } else {
+        // 否则，任务已完成，执行相应的清理操作
         if (enableProfiling) {
           markTaskCompleted(currentTask, currentTime);
           currentTask.isQueued = false;
         }
+
+        // 如果当前任务仍然是队列中的第一个任务，则将其移出队列
         if (currentTask === peek(taskQueue)) {
           pop(taskQueue);
         }
       }
+
+      // 再次更新定时器
       advanceTimers(currentTime);
     } else {
+      // 如果当前任务没有回调函数，直接将其移出任务队列
       pop(taskQueue);
     }
+
+    // 获取队列中的下一个任务
     currentTask = peek(taskQueue);
   }
-  // Return whether there's additional work
+
+  // 判断是否还有更多的任务需要执行
   if (currentTask !== null) {
+    // 如果有更多任务，返回 true
     return true;
   } else {
+    // 如果没有更多任务，检查定时器队列中是否有任务
     const firstTimer = peek(timerQueue);
+
+    // 如果有定时器任务，设置超时请求
     if (firstTimer !== null) {
       requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
     }
+
+    // 返回 false，表示没有更多任务需要处理
     return false;
   }
 }
@@ -605,9 +650,16 @@ if (typeof localSetImmediate === 'function') {
 }
 
 function requestHostCallback(callback) {
+  // 把传入的回调函数存储到全局变量 `scheduledHostCallback` 中
   scheduledHostCallback = callback;
+
+  // 如果消息循环还没有运行
   if (!isMessageLoopRunning) {
+    // 设置 `isMessageLoopRunning` 为 `true`，表示消息循环正在运行
     isMessageLoopRunning = true;
+
+    // 调度任务的执行，使用之前定义的 `schedulePerformWorkUntilDeadline`
+    // 该函数会根据不同的环境选择最优的方式来执行任务
     schedulePerformWorkUntilDeadline();
   }
 }

@@ -753,24 +753,37 @@ export function getBumpedLaneForHydration(
 }
 
 export function addFiberToLanesMap(
-  root: FiberRoot,
-  fiber: Fiber,
-  lanes: Lanes | Lane,
+  root: FiberRoot, // Fiber 树的根节点
+  fiber: Fiber, // 当前需要更新的 Fiber 节点
+  lanes: Lanes | Lane, // 本次更新的 lane（更新优先级）
 ) {
+  // 如果没有启用 Updater 跟踪，则直接返回
   if (!enableUpdaterTracking) {
     return;
   }
+  // 如果 DevTools 不存在，则不需要进行任何操作
   if (!isDevToolsPresent) {
     return;
   }
+
+  // 从根节点获取 pendingUpdatersLaneMap，记录待处理的更新
   const pendingUpdatersLaneMap = root.pendingUpdatersLaneMap;
+
+  // 循环处理 lanes，直到所有位都处理完
   while (lanes > 0) {
+    // 将 lanes 转换为索引，用于找到对应的 lane
     const index = laneToIndex(lanes);
+
+    // 使用位运算提取当前 lane
     const lane = 1 << index;
 
+    // 获取对应 lane 的更新器集合
     const updaters = pendingUpdatersLaneMap[index];
+
+    // 将当前 Fiber 节点添加到该 lane 对应的更新器集合中
     updaters.add(fiber);
 
+    // 移除已处理的 lane，继续处理下一个
     lanes &= ~lane;
   }
 }
