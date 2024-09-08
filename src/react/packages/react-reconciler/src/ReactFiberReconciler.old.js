@@ -398,7 +398,7 @@ export function updateContainer(
 
   // 如果更新队列非空，则调度更新
   if (root !== null) {
-    console.log("scheduleUpdateOnFiber", root);
+    // console.log("scheduleUpdateOnFiber", root);
     scheduleUpdateOnFiber(root, current, lane, eventTime);
     entangleTransitions(root, current, lane);
   }

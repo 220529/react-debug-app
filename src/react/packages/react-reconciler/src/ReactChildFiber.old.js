@@ -787,7 +787,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     newChildren: Array<*>,
     lanes: Lanes,
   ): Fiber | null {
-    console.log("reconcileChildrenArray", newChildren);
+    // console.log("reconcileChildrenArray", newChildren);
     // 这个算法不能通过从两端同时搜索来优化，因为我们没有在 fiber 上的回溯指针。
     // 我们尝试看看在这个模型下能做到什么。如果发现不值得这种权衡，我们可以稍后添加。
 

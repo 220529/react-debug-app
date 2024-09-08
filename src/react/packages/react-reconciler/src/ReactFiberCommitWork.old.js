@@ -516,7 +516,7 @@ function commitHookEffectListUnmount(
   finishedWork: Fiber,              // 当前 fiber 节点，表示处理的组件
   nearestMountedAncestor: Fiber | null // 最近的已挂载祖先节点，用于错误处理
 ) {
-  console.log("commitHookEffectListUnmount...");
+  // console.log("commitHookEffectListUnmount...");
 
   // 获取当前 fiber 的更新队列，包含了组件的所有 effect
   const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
@@ -591,7 +591,7 @@ function commitHookEffectListUnmount(
 // 根据传入的 flag 类型（如 HookPassive 或 HookLayout），来执行相应的副作用
 
 function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
-  console.log("commitHookEffectListMount...");
+  // console.log("commitHookEffectListMount...");
   // 获取当前 fiber 的更新队列
   const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
   const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
@@ -2846,7 +2846,7 @@ function commitPassiveMountOnFiber(
       ) {
         startPassiveEffectTimer();
         try {
-          console.log("commitHookEffectListMount...");
+          // console.log("commitHookEffectListMount...");
           commitHookEffectListMount(HookPassive | HookHasEffect, finishedWork);
         } finally {
           recordPassiveEffectDuration(finishedWork);

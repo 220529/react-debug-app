@@ -1734,7 +1734,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
 // The work loop is an extremely hot path. Tell Closure not to inline it.
 /** @noinline */
 function workLoopSync() {
-  console.log("workLoopSync...");
+  // console.log("workLoopSync...");
   // 已经超时，所以执行工作时不再检查是否需要让步给浏览器。
   // React 在并发模式下会定期检查是否需要暂停渲染，以避免长时间占用主线程导致界面卡顿。
   // 但在同步模式下（如这里的 `workLoopSync`），不需要做这种检查。
