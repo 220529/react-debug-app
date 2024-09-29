@@ -1982,7 +1982,7 @@ function commitRoot(
   recoverableErrors: null | Array<CapturedValue<mixed>>,
   transitions: Array<Transition> | null,
 ) {
-  console.log("commitRoot...");
+  // console.log("commitRoot...");
   // 记录当前的更新优先级和过渡配置
   const previousUpdateLanePriority = getCurrentUpdatePriority();
   const prevTransition = ReactCurrentBatchConfig.transition;

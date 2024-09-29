@@ -640,7 +640,7 @@ if (typeof localSetImmediate === 'function') {
   const port = channel.port2;
   channel.port1.onmessage = performWorkUntilDeadline;
   schedulePerformWorkUntilDeadline = () => {
-    // console.log("port.postMessage...");
+    console.log("port.postMessage...");
     port.postMessage(null);
   };
 } else {

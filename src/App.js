@@ -17,7 +17,10 @@ import Counter from "@/components/counter"
 
 // import RequestAnimationFrameApp from "@/components/RequestAnimationFrameApp"
 
-import LifeCycle from "@/components/life-cycle"
+// import LifeCycle from "@/components/life-cycle"
+import UseState from "@/components/useState"
+// import UseEffect from "@/components/useEffect"
+// import UseLayoutEffect from "@/components/useLayoutEffect"
 
 function App() {
   // return <Test />
@@ -31,7 +34,10 @@ function App() {
       {/* <Virtualized /> */}
       {/* <TodoList /> */}
       {/* <RequestAnimationFrameApp /> */}
-      <LifeCycle />
+      {/* <LifeCycle /> */}
+      <UseState />
+      {/* <UseEffect /> */}
+      {/* <UseLayoutEffect /> */}
     </div>
   );
 }
