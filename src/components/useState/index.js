@@ -12,10 +12,18 @@ const App = () => {
       console.log(2, value);
     });
   }
+  const handler = () => {
+    setValue(value + 1);
+    console.log("value: ", value);
+    setTimeout(() => {
+      console.log("setTimeout.value: ", value);
+    }, 1000)
+  }
   return (
     <div>
       <span>{value}</span>
-      <button onClick={clickHandler}>increase</button>
+      <button onClick={handler}>increase</button>
+      {/* <button onClick={clickHandler}>increase</button> */}
     </div>
   );
 };

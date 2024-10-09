@@ -18,9 +18,11 @@ import Counter from "@/components/counter"
 // import RequestAnimationFrameApp from "@/components/RequestAnimationFrameApp"
 
 // import LifeCycle from "@/components/life-cycle"
-import UseState from "@/components/useState"
+// import UseState from "@/components/useState"
 // import UseEffect from "@/components/useEffect"
 // import UseLayoutEffect from "@/components/useLayoutEffect"
+
+import SetStateApp from "@/components/setState"
 
 function App() {
   // return <Test />
@@ -35,9 +37,10 @@ function App() {
       {/* <TodoList /> */}
       {/* <RequestAnimationFrameApp /> */}
       {/* <LifeCycle /> */}
-      <UseState />
+      {/* <UseState /> */}
       {/* <UseEffect /> */}
       {/* <UseLayoutEffect /> */}
+      <SetStateApp />
     </div>
   );
 }
