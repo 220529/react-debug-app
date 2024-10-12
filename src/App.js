@@ -1,5 +1,5 @@
 // import ForwardRef from "@/components/forwardRef"
-import Counter from "@/components/counter"
+// import Counter from "@/components/counter"
 // import Race from "@/components/race"
 // import Suspense from "@/components/suspense/index7"
 // import TodoList from "@/components/todoList"
@@ -22,7 +22,8 @@ import Counter from "@/components/counter"
 // import UseEffect from "@/components/useEffect"
 // import UseLayoutEffect from "@/components/useLayoutEffect"
 
-import SetStateApp from "@/components/setState"
+// import SetStateApp from "@/components/setState"
+// import BatchedUpdatesApp from "@/components/batchedUpdates"
 
 function App() {
   // return <Test />
@@ -30,7 +31,7 @@ function App() {
     <div id="app">
       {/* <Race /> */}
       {/* <Suspense /> */}
-      {/* <Counter /> */}
+      <Counter />
       {/* <RenderList /> */}
       {/* <SchedulerApp /> */}
       {/* <Virtualized /> */}
@@ -40,7 +41,8 @@ function App() {
       {/* <UseState /> */}
       {/* <UseEffect /> */}
       {/* <UseLayoutEffect /> */}
-      <SetStateApp />
+      {/* <SetStateApp /> */}
+      {/* <BatchedUpdatesApp /> */}
     </div>
   );
 }
